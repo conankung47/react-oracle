@@ -1,74 +1,130 @@
-import React, { useState } from "react";
-import axios from "axios";
-import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
+import Branding from "./login/Branding";
+import SystemStats from "./login/SystemStats";
+import LoginForm from "./login/LoginForm";
+import "./login/LoginPage.css";
+
+const DEMO_ACCOUNTS = {
+  admin: {
+    password: "1234",
+    user: {
+      empId: "MUT-ADMIN",
+      empname: "ผู้ดูแลระบบ",
+      empemail: "admin@mut.ac.th",
+      permission: "1111",
+      role: "admin",
+    },
+  },
+  driver: {
+    password: "1234",
+    user: {
+      empId: "MUT-DRIVER",
+      empname: "คนขับรถ",
+      empemail: "driver@mut.ac.th",
+      permission: "0100",
+      role: "driver",
+    },
+  },
+  user: {
+    password: "1234",
+    user: {
+      empId: "MUT-USER",
+      empname: "นักศึกษา/เจ้าหน้าที่",
+      empemail: "user@mut.ac.th",
+      permission: "0010",
+      role: "user",
+    },
+  },
+};
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (username, password) => {
+    const demo = DEMO_ACCOUNTS[username.toLowerCase()];
+
+    if (demo) {
+      if (demo.password === password) {
+        await wait(500);
+        localStorage.setItem("user", JSON.stringify(demo.user));
+        navigate("/");
+        return;
+      }
+      const err = new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+      throw err;
+    }
+
+    let response;
     try {
-      const response = await axios.post("http://localhost:5000/api/login", {
-        empemail: email,
-        emppassword: password,
+      response = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empemail: username, emppassword: password }),
       });
-
-      // บันทึกข้อมูล Session ลง LocalStorage
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-
-      await Swal.fire({
-        icon: "success",
-        title: "เข้าสู่ระบบสำเร็จ",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-
-      // นำทางไปหน้าแรก
-      navigate("/");
-      window.location.reload();
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "เข้าสู่ระบบไม่สำเร็จ",
-        text: error.response?.data?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อ",
+      throw new Error("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์", {
+        cause: error,
       });
     }
+
+    if (!response.ok) {
+      throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    }
+
+    const data = await response.json();
+    localStorage.setItem("user", JSON.stringify(data.user));
+    navigate("/");
   };
 
   return (
-    <div className="container d-flex justify-content-center align-items-center vh-100">
-      <div className="card shadow p-4" style={{ width: "400px" }}>
-        <h3 className="text-center mb-4">Login</h3>
-        <form onSubmit={handleLogin}>
-          <div className="mb-3">
-            <label className="form-label">Email</label>
-            <input
-              type="email"
-              className="form-control"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+    <main className="login-page">
+      <section className="left-panel">
+        <div className="decor" aria-hidden="true">
+          <span className="decor-rect decor-rect-1" />
+          <span className="decor-rect decor-rect-2" />
+          <span className="decor-rect decor-rect-3" />
+          <span className="decor-line decor-line-1" />
+          <span className="decor-line decor-line-2" />
+          <span className="decor-dot" />
+        </div>
+
+        <div className="left-body">
+          <Branding />
+
+          <div className="hero">
+            <h1 className="hero-title">
+              ระบบบริการ
+              <br />
+              รถรับส่ง MUT
+            </h1>
+            <p className="hero-desc">
+              มหาวิทยาลัยเทคโนโลยีมหานคร
+              <br />
+              ให้บริการรับส่งนักศึกษาและเจ้าหน้าที่
+              <br />
+              ในแถบหนองจอก
+            </p>
           </div>
-          <div className="mb-3">
-            <label className="form-label">Password</label>
-            <input
-              type="password"
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary w-100">
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <SystemStats />
+      </section>
+
+      <section className="right-panel">
+        <LoginForm onSubmit={handleLogin} />
+      </section>
+
+      <button
+        className="help-btn"
+        type="button"
+        aria-label="ช่วยเหลือ"
+        title="ช่วยเหลือ"
+      >
+        ?
+      </button>
+    </main>
   );
 }
 

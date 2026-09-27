@@ -1,0 +1,4 @@
+# รูปสินค้าที่อัปโหลดจะถูก commit เข้า repo
+*
+!.gitkeep
+!.gitignore
